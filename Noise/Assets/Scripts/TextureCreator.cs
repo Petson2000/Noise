@@ -1,15 +1,29 @@
 ﻿using UnityEngine;
 
-
 public class TextureCreator : MonoBehaviour
 {
     public int resolution = 256;
 
+    public NoiseMethodType type;
+
     [Tooltip("If the frequency is doubled the pattern changes twice as fast.")]
     public float frequency = 1f;
 
+    public Gradient coloring;
+
+    [Range(1, 8)]
+    public int octaves = 1;
+
     [Range(1, 3)]
     public int dimensions = 3;
+
+    [Range(1f, 4f)]
+    [Tooltip("The factor by which the frequency changes")]
+    public float lacunarity = 2f;
+
+    [Range(0f, 1f)]
+    [Tooltip("The factor by which the amplitude changes")]
+    public float persistence = 0.5f;
 
     private Texture2D texture;
 
@@ -33,7 +47,7 @@ public class TextureCreator : MonoBehaviour
         if(transform.hasChanged)
         {
             transform.hasChanged = false;
-            FillTexture();
+            //FillTexture();
         }
     }
 
@@ -55,7 +69,7 @@ public class TextureCreator : MonoBehaviour
         Vector3 point01 = transform.TransformPoint(new Vector3 (-0.5f, 0.5f));
         Vector3 point11 = transform.TransformPoint(new Vector3 (0.5f, 0.5f));
 
-        NoiseMethod method = Noise.valueMethods[dimensions - 1];
+        NoiseMethod method = Noise.noiseMethods[(int)type][dimensions - 1];
         float stepSize = 1f / resolution;
         Random.seed = 42;
 
@@ -69,8 +83,15 @@ public class TextureCreator : MonoBehaviour
             for (int x = 0; x < resolution; x++)
             {
                 Vector3 point = Vector3.Lerp(point0, point1, (x + 0.5f) * stepSize);
+
+                float sample = Noise.Sum(method, point, frequency, octaves, lacunarity, persistence);
+
+                if(type != NoiseMethodType.Value)
+                {
+                    sample = sample * 0.5f + 0.5f;
+                }
                 //We can repeat this pattern by using modulus on stepSize and then to keep it visible do times 10
-                texture.SetPixel(x, y, Color.white * method(point, frequency));
+                texture.SetPixel(x, y, coloring.Evaluate(sample));
             }
         }
 
