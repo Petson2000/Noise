@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public delegate float NoiseMethod(Vector3 point, float frequency);
+public delegate NoiseSample NoiseMethod(Vector3 point, float frequency);
 
 public enum NoiseMethodType
 {
@@ -57,7 +57,6 @@ public static class Noise
 
     private const int gradientsMask3D = 15;
 
-
     //g(x,y) = ax + by
     private static float Dot(Vector2 g, float x, float y)
     {
@@ -69,7 +68,7 @@ public static class Noise
         return g.x * x + g.y * g.z * z;
     }
 
-    public static float Sum(NoiseMethod method, Vector3 point, float frequency, int octaves, float lacunarity, float persistence)
+    public static NoiseSample Sum(NoiseMethod method, Vector3 point, float frequency, int octaves, float lacunarity, float persistence)
     {
         /*
          * Noise.Sum now has to accumulate all the octaves, at each step increasing the frequency, 
@@ -79,7 +78,7 @@ public static class Noise
          * The factor by which these are changed are set in the editor(lacunarity and persistence)
          */
 
-        float sum = method(point, frequency);
+        NoiseSample sum = method(point, frequency);
         float amplitude = 1f;
         float range = 1f;
 
@@ -91,7 +90,7 @@ public static class Noise
             sum += method(point, frequency) * amplitude;
         }
 
-        return sum / range;
+        return sum * (1f / range);
     }
 
     private static float sqr2 = Mathf.Sqrt(2);
@@ -144,7 +143,7 @@ public static class Noise
         return t * t * t * (t * 6f - 15f) + 10f;
     }
 
-    public static float Value1D(Vector3 point, float frequency)
+    public static NoiseSample Value1D(Vector3 point, float frequency)
     {
         point *= frequency;
 
@@ -155,11 +154,22 @@ public static class Noise
 
         int h0 = hash[i0];
         int h1 = hash[i1];
+
         t = Smooth(t);
-        return Mathf.Lerp(h0, h1, t) * (1f / hashMask);
+
+        NoiseSample sample;
+        sample.value = Mathf.Lerp(h0, h1, t) * (1f / hashMask);
+
+        sample.derivative.x = 0f;
+        sample.derivative.y = 0f;
+        sample.derivative.z = 0f;
+
+        sample.derivative *= frequency;
+
+        return sample;
     }
 
-    public static float Value2D(Vector3 point, float frequency)
+    public static NoiseSample Value2D(Vector3 point, float frequency)
     {
         point *= frequency;
         int ix0 = Mathf.FloorToInt(point.x);
